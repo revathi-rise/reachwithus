@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host",
+    "prebuild": "node scripts/generate-sitemap.mjs",
     "build": "vite build",
     "preview": "vite preview --port 3000 --host"
   },

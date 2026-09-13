@@ -60,11 +60,26 @@ export class AdminController {
     return this.adminService.toggleUserStatus(id);
   }
 
+  @Patch('users/:id/toggle-phone-verification')
+  async togglePhoneVerification(@Param('id') id: string) {
+    return this.adminService.togglePhoneVerification(id);
+  }
+
   @Get('transactions')
   async getTransactions(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     return this.adminService.getTransactions(page, limit);
+  }
+
+  @Patch('transactions/:id/approve-manual')
+  async approveManualPayment(@Param('id') id: string) {
+    return this.adminService.approveManualPayment(id);
+  }
+
+  @Patch('transactions/:id/reject-manual')
+  async rejectManualPayment(@Param('id') id: string, @Body('note') note?: string) {
+    return this.adminService.rejectManualPayment(id, note);
   }
 }

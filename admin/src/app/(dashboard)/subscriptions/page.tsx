@@ -18,7 +18,6 @@ import { apiRequest, PaymentTransaction } from '@/lib/api';
 export default function SubscriptionsPage() {
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [simulating, setSimulating] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const fetchTransactions = async () => {
@@ -38,23 +37,20 @@ export default function SubscriptionsPage() {
     fetchTransactions();
   }, []);
 
-  const handleSimulatePayment = async () => {
+  const totalRevenue = transactions.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
+
+  const reviewManualPayment = async (id: string, approved: boolean) => {
     try {
-      setSimulating(true);
-      const res = await apiRequest('/payments/simulate-sandbox', {
-        method: 'POST',
+      await apiRequest(`/admin/transactions/${id}/${approved ? 'approve-manual' : 'reject-manual'}`, {
+        method: 'PATCH',
+        body: approved ? undefined : JSON.stringify({ note: 'Payment could not be verified. Please submit a new screenshot.' }),
       });
-      setFeedback(`Simulation successful! Processed ₹10 payment for ${res.user?.name || 'user'}.`);
-      setTimeout(() => setFeedback(null), 4000);
+      setFeedback(approved ? 'Payment approved and subscription activated.' : 'Payment submission rejected.');
       fetchTransactions();
     } catch (err: any) {
-      alert(err.message || 'Simulation failed');
-    } finally {
-      setSimulating(false);
+      alert(err.message || 'Could not review payment');
     }
   };
-
-  const totalRevenue = transactions.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -70,14 +66,6 @@ export default function SubscriptionsPage() {
           </p>
         </div>
 
-        <button
-          onClick={handleSimulatePayment}
-          disabled={simulating}
-          className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 shrink-0"
-        >
-          <Zap className="w-4 h-4 text-amber-300" />
-          <span>{simulating ? 'Simulating...' : 'Simulate ₹10 Payment'}</span>
-        </button>
       </div>
 
       {/* Feedback Banner */}
@@ -162,7 +150,8 @@ export default function SubscriptionsPage() {
                   <th className="p-4 pl-6">Subscriber</th>
                   <th className="p-4">Payment & Order Identifiers</th>
                   <th className="p-4">Amount</th>
-                  <th className="p-4">Gateway Status</th>
+                  <th className="p-4">Payment proof & status</th>
+                  <th className="p-4">Review</th>
                   <th className="p-4 pr-6">Date & Time</th>
                 </tr>
               </thead>
@@ -191,10 +180,22 @@ export default function SubscriptionsPage() {
                     </td>
 
                     <td className="p-4">
+                      {tx.paymentProofUrl && (
+                        <a href={tx.paymentProofUrl} target="_blank" rel="noreferrer" className="mb-2 block text-[11px] text-indigo-300 hover:underline">View screenshot</a>
+                      )}
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         <span>{tx.status}</span>
                       </span>
+                    </td>
+
+                    <td className="p-4">
+                      {tx.provider === 'MANUAL_UPI' && tx.status === 'PENDING' ? (
+                        <div className="flex gap-2">
+                          <button onClick={() => reviewManualPayment(tx.id, true)} className="rounded-lg bg-emerald-500 px-2.5 py-1.5 text-[10px] font-bold text-slate-950">Approve</button>
+                          <button onClick={() => reviewManualPayment(tx.id, false)} className="rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-[10px] font-bold text-rose-300">Reject</button>
+                        </div>
+                      ) : <span className="text-[11px] text-slate-500">—</span>}
                     </td>
 
                     <td className="p-4 pr-6 text-slate-400 text-[11px]">

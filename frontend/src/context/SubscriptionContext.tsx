@@ -16,11 +16,24 @@ interface SubscriptionContextType {
   isLoading: boolean;
   isSubscribed: boolean;
   refreshStatus: () => Promise<void>;
-  simulateSubscribe: () => Promise<void>;
-  processRazorpayPayment: () => Promise<void>;
+  hasPendingManualPayment: boolean;
+  manualPaymentDetails: ManualPaymentDetails | null;
+  submitManualPayment: (transactionId: string) => Promise<void>;
   isModalOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
+}
+
+export interface ManualPaymentDetails {
+  amount: number;
+  currency: string;
+  upiId: string;
+  qrCodeUrl: string;
+}
+
+interface PaymentTransaction {
+  provider: string;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED';
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -30,6 +43,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [status, setStatus] = useState<SubscriptionStatus | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [hasPendingManualPayment, setHasPendingManualPayment] = useState<boolean>(false);
+  const [manualPaymentDetails, setManualPaymentDetails] = useState<ManualPaymentDetails | null>(null);
 
   const refreshStatus = async () => {
     if (!token) {
@@ -38,23 +53,49 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
     try {
       setIsLoading(true);
-      const data = await request<SubscriptionStatus>('/subscriptions/my-status');
+      const [data, transactions] = await Promise.all([
+        request<SubscriptionStatus>('/subscriptions/my-status'),
+        request<PaymentTransaction[]>('/payments/my-transactions'),
+      ]);
       setStatus(data);
+      setHasPendingManualPayment(transactions.some((tx) => tx.provider === 'MANUAL_UPI' && tx.status === 'PENDING'));
     } catch (e) {
       // If error, set null
       setStatus(null);
+      setHasPendingManualPayment(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    request<ManualPaymentDetails>('/payments/manual-payment-details')
+      .then(setManualPaymentDetails)
+      .catch(() => setManualPaymentDetails(null));
+  }, []);
+
+  useEffect(() => {
     if (token) {
       refreshStatus();
     } else {
       setStatus(null);
+      setHasPendingManualPayment(false);
     }
   }, [token, user?.id]);
+
+  const submitManualPayment = async (transactionId: string) => {
+    try {
+      setIsLoading(true);
+      await request('/payments/manual-submissions', {
+        method: 'POST',
+        body: JSON.stringify({ transactionId }),
+      });
+      await refreshStatus();
+      await refreshUser();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const simulateSubscribe = async () => {
     try {
@@ -165,8 +206,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         isLoading,
         isSubscribed,
         refreshStatus,
-        simulateSubscribe,
-        processRazorpayPayment,
+        hasPendingManualPayment,
+        manualPaymentDetails,
+        submitManualPayment,
         isModalOpen,
         openModal: () => setIsModalOpen(true),
         closeModal: () => setIsModalOpen(false),

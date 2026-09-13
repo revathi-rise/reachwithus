@@ -9,6 +9,8 @@ import {
   ArrowRight,
   CreditCard,
   Check,
+  Upload,
+  Clock,
 } from 'lucide-react';
 import { useSubscription } from '../context/SubscriptionContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,9 +22,10 @@ interface SubscriptionModalProps {
 }
 
 export default function SubscriptionModal({ isOpen, onClose, onAuthRequired }: SubscriptionModalProps) {
-  const { isSubscribed, processRazorpayPayment, simulateSubscribe, isLoading } = useSubscription();
+  const { isSubscribed, hasPendingManualPayment, manualPaymentDetails, submitManualPayment, isLoading } = useSubscription();
   const { token } = useAuth();
-  const [success, setSuccess] = useState<boolean>(false);
+  const [transactionId, setTransactionId] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   if (!isOpen) return null;
 
@@ -30,21 +33,21 @@ export default function SubscriptionModal({ isOpen, onClose, onAuthRequired }: S
   if (isSubscribed) return null;
 
 
-  const handleSubscribe = async () => {
+  const handleSubmitPayment = async () => {
     if (!token) {
       onClose();
       onAuthRequired();
       return;
     }
+    if (!transactionId.trim()) {
+      alert('Please enter your UPI transaction ID.');
+      return;
+    }
     try {
-      await processRazorpayPayment();
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        onClose();
-      }, 2000);
+      await submitManualPayment(transactionId.trim());
+      setSubmitted(true);
     } catch (err: any) {
-      alert(err.message || 'Payment simulation failed');
+      alert(err.message || 'Could not submit your UPI transaction ID');
     }
   };
 
@@ -115,49 +118,37 @@ export default function SubscriptionModal({ isOpen, onClose, onAuthRequired }: S
             <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
               <Check className="w-3.5 h-3.5" />
             </div>
-            <span><strong>Protected Payments</strong> via Razorpay Gateway</span>
+            <span><strong>Manual UPI payment</strong> with admin verification</span>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-2.5 pt-2 relative z-10">
-          {success ? (
-            <div className="py-3 px-4 rounded-xl bg-emerald-500 text-slate-950 text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30">
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Subscription Activated Successfully!</span>
+          {submitted || hasPendingManualPayment ? (
+            <div className="py-3 px-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs font-bold flex items-center justify-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>Payment proof is pending admin approval.</span>
             </div>
           ) : (
             <>
+              <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3 text-center space-y-2">
+                <img src={manualPaymentDetails?.qrCodeUrl || '/payment-qr.jpeg'} alt="UPI payment QR code" className="mx-auto h-40 w-40 rounded-lg bg-white object-contain p-1" />
+                {manualPaymentDetails?.upiId && <p className="text-xs text-slate-300">UPI ID: <strong>{manualPaymentDetails.upiId}</strong></p>}
+                <p className="text-[11px] text-slate-400">Pay ₹{manualPaymentDetails?.amount ?? 10}, then enter the UPI transaction ID.</p>
+              </div>
+              <input required value={transactionId} onChange={(e) => setTransactionId(e.target.value)} placeholder="UPI transaction ID (required)" className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
               <button
-                onClick={handleSubscribe}
+                onClick={handleSubmitPayment}
                 disabled={isLoading}
                 className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-[#af0891] to-[#e250e9] hover:from-amber-400 hover:via-[#e250e9] hover:to-[#e250e9] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 active:scale-[0.98]"
               >
                 <Zap className="w-4 h-4 text-amber-300" />
-                <span>{isLoading ? 'Processing Payment...' : 'Subscribe with Razorpay (₹10)'}</span>
+                <span>{isLoading ? 'Submitting...' : 'Submit UPI transaction ID'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <button
-                onClick={async () => {
-                  if (!token) { onClose(); onAuthRequired(); return; }
-                  try {
-                    await simulateSubscribe();
-                    setSuccess(true);
-                    setTimeout(() => { setSuccess(false); onClose(); }, 2000);
-                  } catch (err: any) {
-                    alert(err.message || 'Sandbox activation failed');
-                  }
-                }}
-                disabled={isLoading}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50 active:scale-[0.98]"
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Test Sandbox Activation (Dev Only)</span>
-              </button>
-
               <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500 pt-1">
-                <span>Razorpay for production &bull; Sandbox for testing</span>
+                <span>Access activates only after an admin approves your payment.</span>
               </div>
             </>
           )}

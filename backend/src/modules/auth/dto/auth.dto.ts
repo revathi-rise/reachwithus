@@ -12,9 +12,9 @@ export class RegisterDto {
   @IsString()
   name: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'Mobile number is required' })
   @IsString()
-  phone?: string;
+  phone: string;
 }
 
 export class LoginDto {

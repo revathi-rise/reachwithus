@@ -6,6 +6,7 @@ import HeroSection from './components/HeroSection';
 import HomeScreen from './screens/HomeScreen';
 import CategoriesScreen from './screens/CategoriesScreen';
 import CreatePostScreen from './screens/CreatePostScreen';
+import LegalScreen from './screens/LegalScreen';
 import SubscriptionScreen from './screens/SubscriptionScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import Footer from './components/Footer';
@@ -19,7 +20,12 @@ import { request } from './api';
 import { getPostShareUrl, getPostSlugFromPath } from './lib/postLinks';
 
 function WebsiteApp() {
-  const [currentTab, setCurrentTab] = useState<'feed' | 'categories' | 'subscription' | 'profile'>('feed');
+  const [currentTab, setCurrentTab] = useState<'feed' | 'categories' | 'subscription' | 'profile' | 'terms' | 'privacy'>(() => {
+    if (window.location.pathname === '/terms-and-conditions') return 'terms';
+    if (window.location.pathname === '/privacy-policy') return 'privacy';
+    if (window.location.pathname === '/categories') return 'categories';
+    return 'feed';
+  });
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
@@ -31,6 +37,99 @@ function WebsiteApp() {
   const sharedPostSlug = getPostSlugFromPath(window.location.pathname);
 
   const { isModalOpen: isSubModalOpen, closeModal: closeSubModal, openModal: openSubModal } = useSubscription();
+
+  const navigateToLegal = (page: 'terms' | 'privacy') => {
+    const paths = {
+      terms: '/terms-and-conditions',
+      privacy: '/privacy-policy',
+    };
+    window.history.pushState({}, '', paths[page]);
+    setCurrentTab(page);
+  };
+
+  const navigateHome = () => {
+    window.history.pushState({}, '', '/');
+    setCurrentTab('feed');
+  };
+
+  const handleTabChange = (tab: 'feed' | 'categories' | 'subscription' | 'profile') => {
+    if (tab === 'feed' && currentTab !== 'feed') {
+      navigateHome();
+      return;
+    }
+    if (tab === 'categories') {
+      window.history.pushState({}, '', '/categories');
+    } else if (currentTab === 'categories') {
+      window.history.pushState({}, '', '/');
+    }
+    setCurrentTab(tab);
+  };
+
+  useEffect(() => {
+    const syncLegalRoute = () => {
+      if (window.location.pathname === '/terms-and-conditions') {
+        setCurrentTab('terms');
+      } else if (window.location.pathname === '/privacy-policy') {
+        setCurrentTab('privacy');
+      } else if (window.location.pathname === '/categories') {
+        setCurrentTab('categories');
+      } else if (currentTab === 'terms' || currentTab === 'privacy') {
+        setCurrentTab('feed');
+      } else if (currentTab === 'categories') {
+        setCurrentTab('feed');
+      }
+    };
+
+    window.addEventListener('popstate', syncLegalRoute);
+    return () => window.removeEventListener('popstate', syncLegalRoute);
+  }, [currentTab]);
+
+  useEffect(() => {
+    if (sharedPostSlug) {
+      document.title = sharedPost ? `${sharedPost.title} | ReachWithUs` : 'Post | ReachWithUs';
+      return;
+    }
+
+    const pageTitles = {
+      feed: 'ReachWithUs | Post Requirements & Find Suppliers in India',
+      categories: 'Categories | ReachWithUs',
+      subscription: 'Subscription | ReachWithUs',
+      profile: 'My Profile | ReachWithUs',
+      terms: 'Terms & Conditions | ReachWithUs',
+      privacy: 'Privacy Policy | ReachWithUs',
+    };
+
+    document.title = pageTitles[currentTab];
+  }, [currentTab, sharedPost, sharedPostSlug]);
+
+  useEffect(() => {
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const pageTitles = {
+      feed: 'ReachWithUs | Post Requirements & Find Suppliers in India',
+      categories: 'Categories | ReachWithUs',
+      subscription: 'Subscription | ReachWithUs',
+      profile: 'My Profile | ReachWithUs',
+      terms: 'Terms & Conditions | ReachWithUs',
+      privacy: 'Privacy Policy | ReachWithUs',
+    };
+    const title = sharedPost
+      ? `${sharedPost.title} | ReachWithUs`
+      : sharedPostSlug
+        ? 'Post | ReachWithUs'
+        : pageTitles[currentTab];
+    const pageUrl = `https://www.reachwithusnow.com${window.location.pathname}`;
+
+    if (canonical) {
+      canonical.href = pageUrl;
+    }
+
+    const openGraphUrl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    const openGraphTitle = document.querySelector<HTMLMetaElement>('meta[property="og:title"]');
+    const twitterTitle = document.querySelector<HTMLMetaElement>('meta[name="twitter:title"]');
+    if (openGraphUrl) openGraphUrl.content = pageUrl;
+    if (openGraphTitle) openGraphTitle.content = title;
+    if (twitterTitle) twitterTitle.content = title;
+  }, [currentTab, sharedPost, sharedPostSlug]);
 
   useEffect(() => {
     if (!sharedPostSlug) {
@@ -75,7 +174,13 @@ function WebsiteApp() {
           }}
           onAuthRequired={() => setIsAuthOpen(true)}
         />
-        <Footer />
+        <Footer onNavigate={(page) => {
+          const paths = {
+            terms: '/terms-and-conditions',
+            privacy: '/privacy-policy',
+          };
+          window.location.assign(paths[page]);
+        }} />
         <NotificationsModal
           isOpen={isNotificationsOpen}
           onClose={() => setIsNotificationsOpen(false)}
@@ -100,7 +205,7 @@ function WebsiteApp() {
 
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    setCurrentTab('feed');
+    navigateHome();
   };
 
   const openPostDetailsPage = (post: Post) => {
@@ -120,7 +225,7 @@ function WebsiteApp() {
       {/* Top Navbar */}
       <Navbar
         currentTab={currentTab}
-        onChangeTab={setCurrentTab}
+        onChangeTab={handleTabChange}
         onOpenPostModal={() => setIsPostModalOpen(true)}
         onOpenAuthModal={() => setIsAuthOpen(true)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
@@ -177,10 +282,14 @@ function WebsiteApp() {
             />
           </div>
         )}
+
+        {currentTab === 'terms' && <LegalScreen type="terms" onBack={navigateHome} />}
+
+        {currentTab === 'privacy' && <LegalScreen type="privacy" onBack={navigateHome} />}
       </main>
 
       {/* Footer */}
-      <Footer />
+      <Footer onNavigate={navigateToLegal} />
 
       {/* Modals */}
       <PostDetailsModal

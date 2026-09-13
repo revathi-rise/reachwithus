@@ -25,6 +25,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { SeoModule } from './modules/seo/seo.module';
 import { SeedService } from './database/seed.service';
 
 @Module({
@@ -92,6 +93,7 @@ import { SeedService } from './database/seed.service';
     NotificationsModule,
     AdminModule,
     UploadsModule,
+    SeoModule,
   ],
   providers: [
     SeedService,

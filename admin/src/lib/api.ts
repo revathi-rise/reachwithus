@@ -8,6 +8,7 @@ export interface User {
   role: 'USER' | 'ADMIN';
   avatarUrl?: string;
   isActive: boolean;
+  phoneVerified: boolean;
   createdAt: string;
   subscription?: {
     status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
@@ -85,6 +86,9 @@ export interface PaymentTransaction {
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   amount: number;
   currency: string;
+  provider?: string;
+  paymentProofUrl?: string | null;
+  adminNote?: string | null;
   user: User;
   createdAt: string;
 }

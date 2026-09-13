@@ -6,6 +6,7 @@ export interface User {
   role: 'USER' | 'ADMIN';
   avatarUrl?: string;
   isActive: boolean;
+  phoneVerified?: boolean;
   createdAt: string;
   subscription?: {
     status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';

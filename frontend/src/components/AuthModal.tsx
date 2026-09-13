@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Phone, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface AuthModalProps {
@@ -10,7 +10,7 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   if (!isOpen) return null;
 
-  const { login, register, loginDemoUser, isLoading } = useAuth();
+  const { login, register, isLoading } = useAuth();
   const [isRegister, setIsRegister] = useState<boolean>(false);
   const [email, setEmail] = useState<string>('vikram.sharma@example.com');
   const [password, setPassword] = useState<string>('User@123');
@@ -18,9 +18,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [phone, setPhone] = useState<string>('+91 98765 43210');
   const [error, setError] = useState<string | null>(null);
 
-  const [showOtp, setShowOtp] = useState<boolean>(false);
-  const [otp, setOtp] = useState<string>('');
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [showApprovalInstructions, setShowApprovalInstructions] = useState<boolean>(false);
+
+  const formatPhoneNumber = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.startsWith('91') && digits.length === 12) return `+${digits}`;
+    if (digits.length === 10) return `+91${digits}`;
+    return value.trim();
+  };
 
   const handleInitialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +36,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setError('Please enter a valid phone number');
         return;
       }
-      setShowOtp(true);
+      try {
+        await register(name, email, formatPhoneNumber(phone), password);
+        setShowApprovalInstructions(true);
+      } catch (err: any) {
+        setError(err.message || 'Registration failed');
+      }
     } else {
       // Direct login
       try {
@@ -40,29 +50,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       } catch (err: any) {
         setError(err.message || 'Authentication failed');
       }
-    }
-  };
-
-  const handleVerifyOtpAndRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (otp.length < 6) {
-      setError('Please enter a 6-digit OTP');
-      return;
-    }
-
-    setIsVerifying(true);
-    try {
-      // Simulate network verification delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      await register(name, email, phone, password);
-      onClose();
-      setShowOtp(false);
-      setOtp('');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed');
-    } finally {
-      setIsVerifying(false);
     }
   };
 
@@ -96,43 +83,26 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         )}
 
         {/* Form */}
-        <form onSubmit={showOtp ? handleVerifyOtpAndRegister : handleInitialSubmit} className="space-y-3">
-          {showOtp ? (
+        {showApprovalInstructions ? (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 mx-auto bg-indigo-500/10 rounded-full flex items-center justify-center mb-3 border border-indigo-500/20">
                   <ShieldCheck className="w-8 h-8 text-indigo-400" />
                 </div>
-                <h4 className="text-white font-bold mb-1">Enter Verification Code</h4>
+                <h4 className="text-white font-bold mb-1">Verify Your Mobile Number</h4>
                 <p className="text-xs text-slate-400">
-                  We sent a 6-digit code to <span className="text-indigo-300 font-mono">{phone}</span>
+                  Send a message from your registered mobile
                 </p>
               </div>
 
-              <div>
-                <input
-                  type="text"
-                  required
-                  maxLength={6}
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  className="w-full px-4 py-3 bg-slate-900/80 border border-slate-700 rounded-xl text-center text-xl text-white tracking-[0.5em] placeholder-slate-600 focus:outline-none focus:border-indigo-500 font-mono transition-colors"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isVerifying || otp.length < 6}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#af0891] to-[#e250e9] hover:from-[#e250e9] hover:to-[#af0891] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50"
-              >
-                <span>{isVerifying ? 'Verifying...' : 'Verify & Continue'}</span>
-              </button>
+              <p className="text-center text-sm leading-6 text-slate-300">Send <strong className="text-white">VERIFY</strong> by SMS from <span className="text-indigo-300 font-mono">{phone}</span> to:</p>
+              <a href="sms:9344603401?body=VERIFY" className="block rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-4 text-center text-xl font-bold tracking-wider text-indigo-300">9344603401</a>
+              <p className="text-center text-xs leading-5 text-slate-400">An administrator will review your message and approve your account. You will be able to post only after approval.</p>
 
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setShowOtp(false)}
+                  onClick={onClose}
                   className="text-xs text-slate-400 hover:text-white transition-colors"
                 >
                   Change phone number
@@ -140,7 +110,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             </div>
           ) : (
-            <>
+            <form onSubmit={handleInitialSubmit} className="space-y-3">
               {isRegister && (
             <>
               <div>
@@ -159,7 +129,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
                   Contact Phone
@@ -221,9 +190,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             <span>{isRegister ? 'Create Account' : 'Sign In'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-            </>
+            </form>
           )}
-        </form>
 
         {/* Switch Login / Register */}
         <div className="pt-2 text-center text-xs text-slate-400">

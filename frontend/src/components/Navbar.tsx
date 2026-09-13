@@ -131,7 +131,7 @@ export default function Navbar({
             {/* Post Requirement Button */}
             <button
               onClick={onOpenPostModal}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#af0891] to-[#e250e9] hover:from-[#e250e9] hover:to-[#af0891] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition-all active:scale-95 shrink-0"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-[#af0891] to-[#e250e9] hover:from-amber-400 hover:via-[#e250e9] hover:to-[#e250e9] text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all active:scale-[0.98] shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Post Requirement</span>

@@ -12,6 +12,7 @@ import { UserRole } from '../../common/interfaces/jwt-payload.interface';
 import { CreatePostDto, UpdatePostDto, QueryPostsDto } from './dto/post.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { LikesService } from '../likes/likes.service';
+import { User } from '../../entities/user.entity';
 
 @Injectable()
 export class PostsService {
@@ -25,6 +26,8 @@ export class PostsService {
     private subscriptionsService: SubscriptionsService,
     private likesService: LikesService,
     private dataSource: DataSource,
+    @InjectRepository(User)
+    private userRepo: Repository<User>,
   ) {}
 
   private slugifyTitle(title: string): string {
@@ -216,6 +219,11 @@ export class PostsService {
   }
 
   async create(userId: string, dto: CreatePostDto): Promise<Post> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user?.phoneVerified) {
+      throw new ForbiddenException('Phone verification by admin is required before posting');
+    }
+
     const post = this.postRepo.create({
       title: dto.title,
       slug: await this.createUniqueSlug(dto.title),

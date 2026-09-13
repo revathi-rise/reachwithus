@@ -20,7 +20,7 @@ interface SubscriptionScreenProps {
 }
 
 export default function SubscriptionScreen({ onAuthRequired }: SubscriptionScreenProps) {
-  const { status, isSubscribed, processRazorpayPayment, isLoading } = useSubscription();
+  const { status, isSubscribed, hasPendingManualPayment, openModal } = useSubscription();
   const { token, user } = useAuth();
   const [success, setSuccess] = useState<boolean>(false);
 
@@ -29,13 +29,7 @@ export default function SubscriptionScreen({ onAuthRequired }: SubscriptionScree
       onAuthRequired();
       return;
     }
-    try {
-      await processRazorpayPayment();
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (e: any) {
-      alert(e.message || 'Activation failed');
-    }
+    openModal();
   };
 
   return (
@@ -116,15 +110,14 @@ export default function SubscriptionScreen({ onAuthRequired }: SubscriptionScree
               </p>
             </div>
 
-            {success ? (
+            {hasPendingManualPayment ? (
               <div className="py-3 px-4 rounded-2xl bg-emerald-500 text-slate-950 text-xs font-bold flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Subscription Activated Successfully!</span>
+                <span>Payment proof pending admin approval.</span>
               </div>
             ) : (
               <button
                 onClick={handleActivate}
-                disabled={isLoading}
                 className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 via-[#af0891] to-[#e250e9] hover:from-amber-400 hover:via-[#e250e9] hover:to-[#e250e9] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-600/40 disabled:opacity-50 active:scale-[0.98]"
               >
                 <Zap className="w-4 h-4 text-amber-300" />

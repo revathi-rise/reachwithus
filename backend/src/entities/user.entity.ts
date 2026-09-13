@@ -27,7 +27,7 @@ export class User {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   phone: string;
 
   @Column({
@@ -41,6 +41,9 @@ export class User {
 
   @Column({ default: true })
   isActive: boolean;
+
+  @Column({ default: false })
+  phoneVerified: boolean;
 
   @OneToMany(() => Post, (post) => post.author)
   posts: Post[];

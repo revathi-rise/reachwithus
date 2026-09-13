@@ -9,6 +9,7 @@ import { Category } from '../../entities/category.entity';
 import { Like } from '../../entities/like.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../../entities/notification.entity';
+import { PaymentsService } from '../payments/payments.service';
 
 @Injectable()
 export class AdminService {
@@ -26,6 +27,7 @@ export class AdminService {
     @InjectRepository(Like)
     private likeRepo: Repository<Like>,
     private notificationsService: NotificationsService,
+    private paymentsService: PaymentsService,
   ) {}
 
   async getDashboardStats() {
@@ -205,6 +207,7 @@ export class AdminService {
         avatarUrl: u.avatarUrl,
         role: u.role,
         isActive: u.isActive,
+        phoneVerified: u.phoneVerified,
         postCount: (u as any).postCount || 0,
         hasActiveSubscription: !!hasActive,
         createdAt: u.createdAt,
@@ -237,6 +240,23 @@ export class AdminService {
     };
   }
 
+  async togglePhoneVerification(userId: string) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.phoneVerified = !user.phoneVerified;
+    await this.userRepo.save(user);
+
+    return {
+      success: true,
+      userId: user.id,
+      phoneVerified: user.phoneVerified,
+      message: `Phone verification ${user.phoneVerified ? 'approved' : 'revoked'} successfully`,
+    };
+  }
+
   async getTransactions(page = 1, limit = 20) {
     const [items, total] = await this.txRepo.findAndCount({
       relations: ['user', 'subscription'],
@@ -252,5 +272,13 @@ export class AdminService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async approveManualPayment(transactionId: string) {
+    return this.paymentsService.approveManualPayment(transactionId);
+  }
+
+  async rejectManualPayment(transactionId: string, note?: string) {
+    return this.paymentsService.rejectManualPayment(transactionId, note);
   }
 }

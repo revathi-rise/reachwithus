@@ -55,6 +55,19 @@ export default function UsersPage() {
     }
   };
 
+  const togglePhoneVerification = async (userId: string, currentStatus: boolean) => {
+    try {
+      await apiRequest(`/admin/users/${userId}/toggle-phone-verification`, {
+        method: 'PATCH',
+      });
+      setFeedback(`Phone verification ${currentStatus ? 'revoked' : 'approved'} successfully.`);
+      setTimeout(() => setFeedback(null), 4000);
+      fetchUsers();
+    } catch (err: any) {
+      alert(err.message || 'Phone verification update failed');
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -137,6 +150,7 @@ export default function UsersPage() {
                   <th className="p-4">Platform Role</th>
                   <th className="p-4">Subscription</th>
                   <th className="p-4">Account Status</th>
+                  <th className="p-4">Phone Approval</th>
                   <th className="p-4">Joined Date</th>
                   <th className="p-4 pr-6 text-right">Actions</th>
                 </tr>
@@ -196,6 +210,16 @@ export default function UsersPage() {
                           {u.role === 'ADMIN' && <ShieldCheck className="w-3 h-3 text-purple-400" />}
                           <span>{u.role}</span>
                         </span>
+                      </td>
+
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          onClick={() => togglePhoneVerification(u.id, u.phoneVerified)}
+                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${u.phoneVerified ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/15 text-amber-300'}`}
+                        >
+                          {u.phoneVerified ? 'Verified' : 'Verify Phone'}
+                        </button>
                       </td>
 
                       {/* Subscription */}

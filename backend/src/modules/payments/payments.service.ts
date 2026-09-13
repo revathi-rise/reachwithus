@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -7,7 +7,7 @@ import { PaymentTransaction, PaymentStatus } from '../../entities/payment-transa
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../../entities/notification.entity';
-import { CreateOrderDto, VerifyPaymentDto } from './dto/payment.dto';
+import { CreateOrderDto, SubmitManualPaymentDto, VerifyPaymentDto } from './dto/payment.dto';
 
 @Injectable()
 export class PaymentsService {
@@ -166,6 +166,82 @@ export class PaymentsService {
       where: { userId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  getManualPaymentDetails() {
+    return {
+      amount: this.subscriptionPrice,
+      currency: 'INR',
+      upiId: this.configService.get<string>('MANUAL_PAYMENT_UPI_ID', ''),
+      qrCodeUrl: this.configService.get<string>('MANUAL_PAYMENT_QR_URL', ''),
+    };
+  }
+
+  async submitManualPayment(userId: string, dto: SubmitManualPaymentDto) {
+    const existing = await this.txRepo.findOne({
+      where: { userId, provider: 'MANUAL_UPI', status: PaymentStatus.PENDING },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) {
+      throw new BadRequestException('You already have a payment awaiting admin review.');
+    }
+
+    const tx = this.txRepo.create({
+      userId,
+      amount: this.subscriptionPrice,
+      currency: 'INR',
+      provider: 'MANUAL_UPI',
+      status: PaymentStatus.PENDING,
+      orderId: `manual_${crypto.randomBytes(8).toString('hex')}`,
+      paymentId: dto.transactionId.trim(),
+      payload: JSON.stringify({ transactionId: dto.transactionId.trim() }),
+    });
+    await this.txRepo.save(tx);
+
+    return {
+      success: true,
+      message: 'Payment proof submitted. Your subscription will activate after admin approval.',
+      transaction: tx,
+    };
+  }
+
+  async approveManualPayment(transactionId: string) {
+    const tx = await this.txRepo.findOne({ where: { id: transactionId } });
+    if (!tx) throw new NotFoundException('Payment transaction not found');
+    if (tx.provider !== 'MANUAL_UPI') throw new BadRequestException('Only manual payments can be approved here');
+    if (tx.status !== PaymentStatus.PENDING) throw new BadRequestException('This payment has already been reviewed');
+
+    const sub = await this.subscriptionsService.activateSubscription(
+      tx.userId,
+      Number(tx.amount),
+      tx.orderId,
+      tx.paymentId,
+      'MANUAL_ADMIN_APPROVAL',
+    );
+    tx.status = PaymentStatus.SUCCESS;
+    tx.subscriptionId = sub.id;
+    await this.txRepo.save(tx);
+
+    await this.notificationsService.create(
+      tx.userId,
+      'Subscription Activated!',
+      'Your payment was approved and your ReachWithUs Monthly Pass is now active for 30 days.',
+      NotificationType.SUBSCRIPTION_ACTIVATED,
+      { subscriptionId: sub.id, expiryDate: sub.endDate, transactionId: tx.id },
+    );
+    return { success: true, message: 'Payment approved and subscription activated.', transaction: tx, subscription: sub };
+  }
+
+  async rejectManualPayment(transactionId: string, adminNote?: string) {
+    const tx = await this.txRepo.findOne({ where: { id: transactionId } });
+    if (!tx) throw new NotFoundException('Payment transaction not found');
+    if (tx.provider !== 'MANUAL_UPI' || tx.status !== PaymentStatus.PENDING) {
+      throw new BadRequestException('Only pending manual payments can be rejected');
+    }
+    tx.status = PaymentStatus.FAILED;
+    tx.adminNote = adminNote?.trim() || 'Payment could not be verified. Please submit a new proof.';
+    await this.txRepo.save(tx);
+    return { success: true, message: 'Payment submission rejected.', transaction: tx };
   }
 
   async getAllTransactions(limit = 50, page = 1) {

@@ -9,7 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreateOrderDto, VerifyPaymentDto } from './dto/payment.dto';
+import { CreateOrderDto, SubmitManualPaymentDto, VerifyPaymentDto } from './dto/payment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -41,6 +41,21 @@ export class PaymentsController {
   @HttpCode(HttpStatus.OK)
   async simulateSandbox(@CurrentUser('id') userId: string) {
     return this.paymentsService.simulateSandboxPayment(userId);
+  }
+
+  @Get('manual-payment-details')
+  async getManualPaymentDetails() {
+    return this.paymentsService.getManualPaymentDetails();
+  }
+
+  @Post('manual-submissions')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async submitManualPayment(
+    @CurrentUser('id') userId: string,
+    @Body() dto: SubmitManualPaymentDto,
+  ) {
+    return this.paymentsService.submitManualPayment(userId, dto);
   }
 
   @Get('my-transactions')

@@ -42,7 +42,7 @@ export class PaymentTransaction {
   @Column({ default: 'INR' })
   currency: string;
 
-  @Column({ default: 'RAZORPAY' })
+  @Column({ default: 'MANUAL_UPI' })
   provider: string;
 
   @Column({
@@ -62,6 +62,12 @@ export class PaymentTransaction {
 
   @Column({ type: 'text', nullable: true })
   payload: string;
+
+  @Column({ type: 'text', nullable: true })
+  paymentProofUrl: string;
+
+  @Column({ type: 'text', nullable: true })
+  adminNote: string;
 
   @CreateDateColumn()
   createdAt: Date;

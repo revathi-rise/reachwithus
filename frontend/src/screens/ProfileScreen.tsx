@@ -50,7 +50,7 @@ export default function ProfileScreen({
   onOpenSubscription,
   onSelectPost,
 }: ProfileScreenProps) {
-  const { user, token, logout, loginDemoUser } = useAuth();
+  const { user, token, logout } = useAuth();
   const { isSubscribed, status } = useSubscription();
 
   const [myPosts, setMyPosts] = useState<Post[]>([]);
@@ -221,27 +221,6 @@ export default function ProfileScreen({
                 Upgrade ₹10
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Demo Fast Switcher (Helpful for evaluation) */}
-        <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span className="font-semibold uppercase text-[10px] tracking-wider text-slate-400">Switch Test Profile</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => loginDemoUser(true)}
-              className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-[#e250e9] text-slate-200 hover:text-white text-xs font-semibold transition-all border border-slate-700 truncate text-center"
-            >
-              Vikram (VIP Active)
-            </button>
-            <button
-              onClick={() => loginDemoUser(false)}
-              className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-[#e250e9] text-slate-200 hover:text-white text-xs font-semibold transition-all border border-slate-700 truncate text-center"
-            >
-              Priya (Free Account)
-            </button>
           </div>
         </div>
 

@@ -28,6 +28,12 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
+    const phone = this.normalizePhone(dto.phone);
+    const phoneInUse = await this.findUserByPhone(phone);
+    if (phoneInUse) {
+      throw new ConflictException('An account with this mobile number already exists');
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(dto.password, salt);
 
@@ -35,9 +41,10 @@ export class AuthService {
       email: dto.email.toLowerCase(),
       passwordHash,
       name: dto.name,
-      phone: dto.phone,
+      phone,
       role: UserRole.USER,
       isActive: true,
+      phoneVerified: false,
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -52,6 +59,7 @@ export class AuthService {
         role: savedUser.role,
         avatarUrl: savedUser.avatarUrl,
         createdAt: savedUser.createdAt,
+        phoneVerified: savedUser.phoneVerified,
       },
       accessToken: token,
     };
@@ -88,6 +96,7 @@ export class AuthService {
         role: user.role,
         avatarUrl: user.avatarUrl,
         createdAt: user.createdAt,
+        phoneVerified: user.phoneVerified,
       },
       accessToken: token,
     };
@@ -113,7 +122,14 @@ export class AuthService {
     }
 
     if (dto.name) user.name = dto.name;
-    if (dto.phone) user.phone = dto.phone;
+    if (dto.phone) {
+      const phone = this.normalizePhone(dto.phone);
+      const phoneInUse = await this.findUserByPhone(phone, userId);
+      if (phoneInUse) {
+        throw new ConflictException('An account with this mobile number already exists');
+      }
+      user.phone = phone;
+    }
     if (dto.avatarUrl) user.avatarUrl = dto.avatarUrl;
     if (dto.password) {
       const salt = await bcrypt.genSalt(10);
@@ -129,6 +145,7 @@ export class AuthService {
       phone: user.phone,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      phoneVerified: user.phoneVerified,
       updatedAt: user.updatedAt,
     };
   }
@@ -141,5 +158,16 @@ export class AuthService {
       name: user.name,
     };
     return this.jwtService.sign(payload);
+  }
+
+  private normalizePhone(phone: string): string {
+    return `+${phone.replace(/\D/g, '')}`;
+  }
+
+  private async findUserByPhone(normalizedPhone: string, excludeUserId?: string): Promise<User | null> {
+    const users = await this.userRepository.find({ select: ['id', 'phone'] });
+    return users.find((user) =>
+      user.id !== excludeUserId && user.phone && this.normalizePhone(user.phone) === normalizedPhone,
+    ) || null;
   }
 }

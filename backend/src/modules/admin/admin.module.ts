@@ -9,6 +9,7 @@ import { Like } from '../../entities/like.entity';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       Like,
     ]),
     NotificationsModule,
+    PaymentsModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

@@ -33,6 +33,7 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [professionalContentAccepted, setProfessionalContentAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -73,6 +74,10 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
     e.preventDefault();
     if (!token) {
       onAuthRequired();
+      return;
+    }
+    if (!professionalContentAccepted) {
+      setError('Please confirm that your requirement contains only lawful, professional content.');
       return;
     }
     setError(null);
@@ -118,6 +123,23 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
         >
           Sign In / Create Account
         </button>
+      </div>
+    );
+  }
+
+  if (!user?.phoneVerified) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center bg-[#0b101b]">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mb-4 border border-amber-500/30">
+          <ShieldCheck className="w-7 h-7" />
+        </div>
+        <h2 className="text-base font-bold text-white">Phone Approval Required</h2>
+        <p className="text-xs text-slate-400 mt-2 max-w-sm leading-relaxed">
+          Send <strong className="text-white">VERIFY</strong> by SMS from your registered mobile number to <strong className="text-indigo-300">9344603401</strong>. An administrator will verify your message before posting is enabled.
+        </p>
+        <a href="sms:9344603401?body=VERIFY" className="mt-5 px-6 py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-xs font-bold">
+          Send VERIFY message
+        </a>
       </div>
     );
   }
@@ -313,10 +335,23 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
           )}
         </div>
 
+        <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/60 cursor-pointer">
+          <input
+            type="checkbox"
+            required
+            checked={professionalContentAccepted}
+            onChange={(e) => setProfessionalContentAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-500"
+          />
+          <span className="text-[11px] leading-5 text-slate-300">
+            I confirm this requirement is lawful and professional. It does not contain illegal, fraudulent, abusive, hateful, sexually explicit, pornographic, obscene, exploitative, or otherwise inappropriate content, and I agree to the ReachWithUs Terms &amp; Conditions.
+          </span>
+        </label>
+
         {/* Submit CTA */}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !professionalContentAccepted}
           className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#af0891] to-[#e250e9] hover:from-[#e250e9] hover:to-[#af0891] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 active:scale-[0.99]"
         >
           {submitting ? 'Submitting for Moderation...' : 'Submit Requirement for Approval'}
