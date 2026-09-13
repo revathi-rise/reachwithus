@@ -1,6 +1,10 @@
 import { User, Category, Post, Notification } from './types';
 
-export const API_BASE_URL = 'http://www.reachwithusnow.com/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL is not configured');
+}
 
 function getToken(): string | null {
   return localStorage.getItem('reachwithus_user_token');
