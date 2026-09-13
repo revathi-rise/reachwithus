@@ -1,6 +1,6 @@
 import { User, Category, Post, Notification } from './types';
 
-export const API_BASE_URL = 'http://localhost:5000/api';
+export const API_BASE_URL = 'http://www.reachwithusnow.com/api';
 
 function getToken(): string | null {
   return localStorage.getItem('reachwithus_user_token');
