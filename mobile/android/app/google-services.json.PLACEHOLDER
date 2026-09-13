@@ -1,0 +1,17 @@
+// ⚠️  REPLACE THIS FILE WITH YOUR REAL google-services.json FROM FIREBASE CONSOLE ⚠️
+//
+// Steps:
+// 1. Go to https://console.firebase.google.com/
+// 2. Create or open your Firebase project
+// 3. Click "Add app" → Android
+// 4. Enter package name: com.reachwithus.reachwithus
+// 5. Download google-services.json
+// 6. Replace this file with the downloaded google-services.json
+// 7. Also enable "Phone" sign-in method at:
+//    Firebase Console → Authentication → Sign-in method → Phone → Enable
+//
+// The real file is JSON format and starts with:
+// {
+//   "project_info": { ... },
+//   "client": [ ... ]
+// }

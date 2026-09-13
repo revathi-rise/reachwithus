@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --bg-dark: #0a0f1d;
+  --card-dark: #121929;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #060911;
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism */
+.glass-nav {
+  background: rgba(18, 25, 41, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-header {
+  background: transparent;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card {
+  background: rgba(18, 25, 41, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Smooth hide scrollbars for horizontal pill menus */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer utilities {
+  .bg-indigo-600 { background-color: #af0891 !important; }
+  .bg-indigo-600\/80 { background-color: rgb(175 8 145 / 0.8) !important; }
+  .hover\:bg-indigo-600:hover { background-color: #e250e9 !important; }
+  .hover\:bg-indigo-500:hover { background-color: #e250e9 !important; }
+  .from-indigo-600 { --tw-gradient-from: #af0891 var(--tw-gradient-from-position); --tw-gradient-to: rgb(175 8 145 / 0) var(--tw-gradient-to-position); }
+  .to-indigo-500 { --tw-gradient-to: #e250e9 var(--tw-gradient-to-position); }
+  .hover\:from-indigo-500:hover { --tw-gradient-from: #e250e9 var(--tw-gradient-from-position); --tw-gradient-to: rgb(226 80 233 / 0) var(--tw-gradient-to-position); }
+  .hover\:to-indigo-500:hover { --tw-gradient-to: #e250e9 var(--tw-gradient-to-position); }
+  .hover\:to-indigo-600:hover { --tw-gradient-to: #af0891 var(--tw-gradient-to-position); }
+  .shadow-indigo-600\/30 { --tw-shadow-color: rgb(175 8 145 / 0.3); }
+  .shadow-indigo-600\/40 { --tw-shadow-color: rgb(175 8 145 / 0.4); }
+}
