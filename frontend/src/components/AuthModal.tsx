@@ -12,10 +12,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const { login, register, isLoading } = useAuth();
   const [isRegister, setIsRegister] = useState<boolean>(false);
-  const [email, setEmail] = useState<string>('vikram.sharma@example.com');
-  const [password, setPassword] = useState<string>('User@123');
-  const [name, setName] = useState<string>('Vikram Sharma');
-  const [phone, setPhone] = useState<string>('+91 98765 43210');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [name, setName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const [showApprovalInstructions, setShowApprovalInstructions] = useState<boolean>(false);
