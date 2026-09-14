@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Cropper, { Area } from 'react-easy-crop';
 import {
   PlusCircle,
   Image as ImageIcon,
@@ -14,6 +15,7 @@ import {
 import { Category } from '../types';
 import { request, uploadImage } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { createFeedImage } from '../lib/imageCrop';
 
 interface CreatePostScreenProps {
   onSuccess: () => void;
@@ -30,6 +32,10 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
   const [budget, setBudget] = useState('');
   const [contactPhone, setContactPhone] = useState(user?.phone || '+91 98765 43210');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [imageToCrop, setImageToCrop] = useState<{ url: string; name: string } | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
@@ -51,14 +57,38 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
     }
   }, [user]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file.');
+      return;
+    }
+
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setImageToCrop({ url: URL.createObjectURL(file), name: file.name });
+    // Permit choosing the same image again after cancelling or cropping.
+    e.target.value = '';
+  };
+
+  const closeCropper = () => {
+    if (imageToCrop) URL.revokeObjectURL(imageToCrop.url);
+    setImageToCrop(null);
+    setCroppedAreaPixels(null);
+  };
+
+  const handleCroppedUpload = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+
     try {
       setUploading(true);
-      const res = await uploadImage(file);
+      const croppedFile = await createFeedImage(imageToCrop.url, croppedAreaPixels, imageToCrop.name);
+      const res = await uploadImage(croppedFile);
       setUploadedImages((prev) => [...prev, res.url]);
+      closeCropper();
     } catch (err: any) {
       alert(err.message || 'Image upload failed.');
     } finally {
@@ -309,7 +339,7 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleFileUpload}
+                onChange={handleFileSelect}
                 className="hidden"
                 disabled={uploading}
               />
@@ -357,6 +387,58 @@ export default function CreatePostScreen({ onSuccess, onAuthRequired }: CreatePo
           {submitting ? 'Submitting for Moderation...' : 'Submit Requirement for Approval'}
         </button>
       </form>
+
+      {imageToCrop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-[#101827] shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-800 px-4 py-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">Crop image for your requirement</h3>
+                <p className="mt-0.5 text-[11px] text-slate-400">This is exactly the 16:9 frame used on the public feed.</p>
+              </div>
+              <button type="button" onClick={closeCropper} className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Cancel image crop">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="relative aspect-video bg-black">
+              <Cropper
+                image={imageToCrop.url}
+                crop={crop}
+                zoom={zoom}
+                aspect={16 / 9}
+                cropShape="rect"
+                showGrid={false}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+              />
+            </div>
+
+            <div className="space-y-3 px-4 py-4">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Zoom
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.01"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="mt-2 w-full accent-indigo-500"
+                />
+              </label>
+              <p className="text-[11px] leading-relaxed text-slate-400">Drag the image to place the important content inside the frame. It will be saved as a feed-optimised 1600 × 900 image.</p>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={closeCropper} disabled={uploading} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 disabled:opacity-50">Cancel</button>
+                <button type="button" onClick={handleCroppedUpload} disabled={uploading || !croppedAreaPixels} className="rounded-xl bg-[#af0891] px-4 py-2 text-xs font-bold text-white hover:bg-[#e250e9] disabled:opacity-50">
+                  {uploading ? 'Preparing image...' : 'Crop & upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
